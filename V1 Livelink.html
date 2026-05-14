@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LiveLink — Propuesta Campaña de Reconocimiento</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --navy:#16163a;--navy2:#11112e;--navy3:#0d0d28;
+  --orange:#f05a00;
+  --font:'Outfit',sans-serif;
+  --ease:cubic-bezier(0.76,0,0.24,1);
+  --sidebar:64px;
+  --col-closed:88px;
+  --dur:.7s;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--navy);color:#fff;font-family:var(--font);cursor:none;}
+
+/* CURSOR */
+#cur{position:fixed;z-index:9999;width:10px;height:10px;background:#fff;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);}
+#cur2{position:fixed;z-index:9998;width:34px;height:34px;border:1.5px solid rgba(240,90,0,0.5);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);}
+
+/* SHELL */
+#shell{position:fixed;inset:0;display:flex;}
+
+/* SIDEBAR */
+#sidebar{
+  width:var(--sidebar);flex-shrink:0;
+  background:var(--navy2);
+  border-right:1px solid rgba(255,255,255,0.06);
+  display:flex;flex-direction:column;align-items:center;
+  padding:20px 0;z-index:20;
+}
+#logo-mark{
+  width:44px;height:44px;background:var(--orange);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:22px;color:#fff;
+  user-select:none;cursor:pointer;
+  transition:transform .2s var(--ease),opacity .2s;
+}
+#logo-mark:hover{transform:scale(1.08);opacity:.9;}
+
+/* MAIN */
+#main{flex:1;display:flex;position:relative;overflow:hidden;}
+
+/* STAGE HOME */
+#stage-home{
+  position:relative;overflow:hidden;
+  flex:1;
+  transition:flex var(--dur) var(--ease), opacity var(--dur) var(--ease);
+  z-index:1;
+}
+#main.panel-open #stage-home{flex:0;opacity:0;pointer-events:none;}
+
+/* DOTS */
+.dots-bg{position:absolute;inset:0;pointer-events:none;z-index:0;}
+.dot{position:absolute;border-radius:50%;opacity:0;transform:scale(0.4);transition:opacity .7s var(--ease),transform .7s var(--ease);}
+.dot.show{opacity:1;transform:scale(1);}
+.dot-o{background:var(--orange);}
+.dot-d{background:rgba(155,50,8,0.5);}
+
+/* HOME CONTENT */
+#home-content{
+  position:absolute;inset:0;z-index:1;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:0 72px;padding-bottom:14vh;
+  transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease);
+}
+#main.panel-open #home-content{opacity:0;transform:translateX(-30px);}
+.home-logo{font-size:clamp(80px,10vw,118px);font-weight:800;line-height:1;letter-spacing:-3px;margin-bottom:26px;user-select:none;}
+.home-logo .live{color:#fff;font-weight:300;}
+.home-logo .link{color:var(--orange);font-weight:800;}
+.home-rule{width:min(540px,75%);height:1px;background:rgba(255,255,255,0.22);margin-bottom:22px;}
+.home-sub{font-size:clamp(18px,2.2vw,28px);font-weight:200;color:rgba(255,255,255,0.85);letter-spacing:0.01em;line-height:1.3;}
+
+/* ══════════════════════════════════════════
+   COLUMNAS NAV
+   Cada columna tiene:
+   - ancho cerrado: 88px
+   - ancho abierto: todo el espacio disponible
+   - número + etiqueta SIEMPRE visibles, alineados a la izquierda
+   ══════════════════════════════════════════ */
+.nav-col{
+  position:relative;
+  flex-shrink:0;
+  width:var(--col-closed);
+  border-left:1px solid rgba(255,255,255,0.07);
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;   /* todo alineado a la izquierda */
+  cursor:pointer;
+  overflow:hidden;
+  transition:width var(--dur) var(--ease), background .3s, flex var(--dur) var(--ease);
+  z-index:5;
+}
+.nav-col:hover:not(.active){background:rgba(255,255,255,0.02);}
+
+/* Columna ACTIVA se expande, toma todo el flex restante */
+.nav-col.active{
+  width:auto;
+  flex:1;
+  background:var(--navy);
+  cursor:default;
+}
+
+/* Número — siempre arriba izquierda */
+.nav-num-wrap{
+  display:flex;
+  align-items:center;
+  padding:24px 0 0 22px;   /* izquierda fija */
+  flex-shrink:0;
+  width:100%;
+}
+.nav-num-inner{
+  width:44px;height:44px;
+  border-radius:50%;
+  border:2.5px solid var(--orange);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:700;color:#fff;
+  background:transparent;
+  transition:background .3s;
+  flex-shrink:0;
+}
+.nav-col.active    .nav-num-inner{background:rgba(240,90,0,0.15);}
+.nav-col:hover:not(.active) .nav-num-inner{background:rgba(240,90,0,0.1);}
+
+/* Etiqueta — rotada, siempre abajo izquierda, SIEMPRE VISIBLE */
+.nav-label{
+  position:absolute;
+  bottom:32px;
+  left:22px;                /* fija a la izquierda */
+  writing-mode:vertical-rl;
+  transform:rotate(180deg);
+  transform-origin:left center;
+  font-size:24px;font-weight:700;letter-spacing:.04em;
+  color:rgba(255,255,255,0.45);
+  white-space:nowrap;user-select:none;
+  transition:color .3s;
+  pointer-events:none;
+}
+.nav-col:hover:not(.active) .nav-label{color:rgba(255,255,255,0.8);}
+.nav-col.active .nav-label{color:rgba(255,255,255,0.6);}
+
+/* CONTENIDO de la columna activa */
+.col-content{
+  position:absolute;
+  inset:0;
+  /* espacio para el número arriba */
+  padding:90px 72px 60px 80px;
+  opacity:0;
+  pointer-events:none;
+  transform:translateX(40px);
+  transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+  overflow-y:auto;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.nav-col.active .col-content{
+  opacity:1;
+  pointer-events:all;
+  transform:translateX(0);
+  transition-delay:.2s;
+}
+
+/* AVATAR D-ID — ocupa todo el col-content sin padding */
+#content-4{
+  padding:0 !important;
+  overflow:hidden;
+}
+#did-host{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  background:var(--navy);
+}
+/* Forzar que el widget D-ID llene todo */
+#did-host > *,
+#did-agent{
+  width:100% !important;
+  height:100% !important;
+  border:none !important;
+  border-radius:0 !important;
+  min-height:unset !important;
+}
+
+/* OVERLAY */
+#ov{position:fixed;inset:0;background:var(--navy3);z-index:200;pointer-events:none;opacity:0;transition:opacity .3s var(--ease);}
+#ov.on{opacity:.45;}
+</style>
+</head>
+<body>
+<div id="cur"></div>
+<div id="cur2"></div>
+<div id="ov"></div>
+
+<div id="shell">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="logo-mark" onclick="goTo(0)">L</div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- HOME -->
+    <div id="stage-home">
+      <div class="dots-bg" id="dotsBg"></div>
+      <div id="home-content">
+        <div class="home-logo"><span class="live">Live</span><span class="link">Link</span></div>
+        <div class="home-rule"></div>
+        <div class="home-sub">Propuesta Campaña de Reconocimiento</div>
+      </div>
+    </div>
+
+    <!-- COL 1 -->
+    <div class="nav-col" id="nc1" onclick="handleClick(1)">
+      <div class="nav-num-wrap"><div class="nav-num-inner">1</div></div>
+      <div class="nav-label">¿Por qué?</div>
+      <div class="col-content" id="content-1">
+        <!-- contenido por agregar -->
+      </div>
+    </div>
+
+    <!-- COL 2 -->
+    <div class="nav-col" id="nc2" onclick="handleClick(2)">
+      <div class="nav-num-wrap"><div class="nav-num-inner">2</div></div>
+      <div class="nav-label">¿Cómo?</div>
+      <div class="col-content" id="content-2">
+        <!-- contenido por agregar -->
+      </div>
+    </div>
+
+    <!-- COL 3 -->
+    <div class="nav-col" id="nc3" onclick="handleClick(3)">
+      <div class="nav-num-wrap"><div class="nav-num-inner">3</div></div>
+      <div class="nav-label">¿Dónde?</div>
+      <div class="col-content" id="content-3">
+        <!-- contenido por agregar -->
+      </div>
+    </div>
+
+    <!-- COL 4: ¿Quién? — Avatar D-ID -->
+    <div class="nav-col" id="nc4" onclick="handleClick(4)">
+      <div class="nav-num-wrap"><div class="nav-num-inner">4</div></div>
+      <div class="nav-label">¿Quién?</div>
+      <div class="col-content" id="content-4">
+        <div id="did-host"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// CURSOR
+const cur=document.getElementById('cur'),cur2=document.getElementById('cur2');
+let mx=0,my=0,cx=0,cy=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
+(function a(){cx+=(mx-cx)*.11;cy+=(my-cy)*.11;cur2.style.left=cx+'px';cur2.style.top=cy+'px';requestAnimationFrame(a);})();
+
+// DOTS
+const DOTS_HOME=[
+  [18,4,28,'o'],[28,2,20,'d'],[38,0,36,'o'],[48,3,18,'d'],
+  [55,4,50,'o'],[62,1,16,'d'],[9,18,18,'d'],[40,9,14,'d'],
+  [63,5,22,'d'],[68,2,20,'d'],[6,82,20,'d'],[10,89,42,'o'],
+  [20,91,18,'d'],[29,86,34,'o'],[41,88,16,'d'],[51,93,16,'d'],
+  [60,85,12,'d'],[75,87,10,'d'],[50,68,10,'d'],
+];
+const bg=document.getElementById('dotsBg');
+let dotEls=[];
+function spawnDots(){
+  dotEls.forEach(d=>{d.classList.remove('show');setTimeout(()=>d.remove(),700);});
+  dotEls=[];
+  DOTS_HOME.forEach(([x,y,s,t],i)=>{
+    const el=document.createElement('div');
+    el.className=`dot dot-${t}`;
+    el.style.cssText=`left:${x}%;top:${y}%;width:${s}px;height:${s}px;transition-delay:${i*55}ms`;
+    bg.appendChild(el);dotEls.push(el);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('show')));
+  });
+}
+spawnDots();
+
+// NAV
+const main=document.getElementById('main');
+const cols=[null,
+  document.getElementById('nc1'),
+  document.getElementById('nc2'),
+  document.getElementById('nc3'),
+  document.getElementById('nc4'),
+];
+const ov=document.getElementById('ov');
+let cur_p=0;
+
+function handleClick(idx){
+  if(cur_p===idx) return; // ya activa, no hacer nada
+  goTo(idx);
+}
+
+function goTo(idx){
+  if(idx===cur_p) return;
+  ov.classList.add('on');
+  setTimeout(()=>ov.classList.remove('on'),280);
+  if(cur_p>0) cols[cur_p].classList.remove('active');
+  if(idx===0){
+    main.classList.remove('panel-open');
+    dotEls.forEach(d=>d.classList.remove('show'));
+    setTimeout(()=>spawnDots(),180);
+  } else {
+    main.classList.add('panel-open');
+    cols[idx].classList.add('active');
+    if(idx === 4) loadDID();
+  }
+  cur_p=idx;
+}
+
+document.getElementById('logo-mark').addEventListener('click',()=>goTo(0));
+
+// ── D-ID: cargar dinámicamente solo cuando se abre col 4 ──
+let didLoaded = false;
+function loadDID() {
+  if (didLoaded) return;
+  didLoaded = true;
+  const s = document.createElement('script');
+  s.type = 'module';
+  s.src = 'https://agent.d-id.com/v2/index.js';
+  s.setAttribute('data-mode', 'full');
+  s.setAttribute('data-client-key', 'ck_7VK-RuXdoFk1ks2ao2VH8');
+  s.setAttribute('data-agent-id', 'v2_agt_CsdsDcif');
+  s.setAttribute('data-name', 'did-agent');
+  s.setAttribute('data-monitor', 'true');
+  s.setAttribute('data-target-id', 'did-host');
+  document.body.appendChild(s);
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') goTo(0);
+  if(e.key==='ArrowRight') goTo(Math.min(cur_p===0?1:cur_p+1,4));
+  if(e.key==='ArrowLeft'){ if(cur_p>1) goTo(cur_p-1); else goTo(0); }
+});
+</script>
+</body>
+</html>
